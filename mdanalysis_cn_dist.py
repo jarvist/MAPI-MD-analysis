@@ -19,23 +19,39 @@ nitrogens=u.selectAtoms('name N')
 
 mybox=numpy.array([12.5801704656605438,12.5477821243936827,12.5940169967174249],dtype=numpy.float32)
 imybox=1/mybox
-print mybox, imybox
+print "# box: ",mybox, imybox
 
 for ts in u.trajectory:
     r=MDAnalysis.analysis.distances.distance_array(carbons.coordinates(),nitrogens.coordinates(),mybox)
     # OK, this is now the distance array of all Ns vs. Cs, considering PBCs
-    print r
+#    print r
     for carbon, nitrogenlist in enumerate(r):
         for nitrogen,distance in enumerate(nitrogenlist):
             if distance<1.6: 
-                print carbon, nitrogen, distance
+                #print carbon, nitrogen, distance
                 d=carbons[carbon].pos - nitrogens[nitrogen].pos
                 # Filthily hack in some orthorhombic (only) PBCs as I can't see how MDanalysis does this properly
                 for dim in 0,1,2:
                     s=imybox[dim] * d[dim] # Minimum image convetion, algo from MDAnalysis calc_distances.h
                     d[dim]=mybox[dim]*(s-round(s)) 
-                print d
-                
+ #               print d
+               
+                #OK; r is now our 3-vector along CN bond
+                cn=sorted(abs(d),reverse=True) #Exploit Oh symmetry - see workings in Jarv's notebooks
+                # (rear page of Orange book, 16-4-14)
+                #print cn,r
+
+                x=cn[0]
+                y=cn[1]
+                z=cn[2]
+                l=numpy.linalg.norm(cn)
+
+                theta = math.acos(z/l)
+                phi   = math.atan2(y,x)
+                #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
+                print "%f %f %f %f %f %f %f %f" %(theta,phi,x,y,z,d[0],d[1],d[2])
+
+end
 
 for ts in u.trajectory:
     for c in carbons:
