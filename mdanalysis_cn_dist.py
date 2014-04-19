@@ -17,12 +17,32 @@ u= MDAnalysis.Universe("1stframe.pdb","MAPI_222_equilibr_traj.xyz")
 carbons=u.selectAtoms('name C')
 nitrogens=u.selectAtoms('name N')
 
+mybox=numpy.array([12.5801704656605438,12.5477821243936827,12.5940169967174249],dtype=numpy.float32)
+imybox=1/mybox
+print mybox, imybox
+
+for ts in u.trajectory:
+    r=MDAnalysis.analysis.distances.distance_array(carbons.coordinates(),nitrogens.coordinates(),mybox)
+    # OK, this is now the distance array of all Ns vs. Cs, considering PBCs
+    print r
+    for carbon, nitrogenlist in enumerate(r):
+        for nitrogen,distance in enumerate(nitrogenlist):
+            if distance<1.6: 
+                print carbon, nitrogen, distance
+                d=carbons[carbon].pos - nitrogens[nitrogen].pos
+                # Filthily hack in some orthorhombic (only) PBCs as I can't see how MDanalysis does this properly
+                for dim in 0,1,2:
+                    s=imybox[dim] * d[dim] # Minimum image convetion, algo from MDAnalysis calc_distances.h
+                    d[dim]=mybox[dim]*(s-round(s)) 
+                print d
+                
+
 for ts in u.trajectory:
     for c in carbons:
         for n in nitrogens:
             r=c.pos - n.pos
             print r
-            r=MDAnalysis.analysis.distances.dist(c,n)
+            #embed()
             print c,n,r
             d=numpy.linalg.norm(r)
             if (d<1.8): #i.e. these are near bonds. TODO: PBCs _NOT_ treated properly.
