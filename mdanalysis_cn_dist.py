@@ -19,12 +19,14 @@ nitrogens=u.selectAtoms('name N')
 
 mybox=numpy.array([12.5801704656605438,12.5477821243936827,12.5940169967174249],dtype=numpy.float32)
 imybox=1/mybox
-print "# box: ",mybox, imybox
+#print "# box: ",mybox, imybox
 
 for ts in u.trajectory:
+    # Of course - this list doesn't actually change between frames; it's part of the topology
     r=MDAnalysis.analysis.distances.distance_array(carbons.coordinates(),nitrogens.coordinates(),mybox)
     # OK, this is now the distance array of all Ns vs. Cs, considering PBCs
 #    print r
+    print "16\n" #header for .xyz frames
     for carbon, nitrogenlist in enumerate(r):
         for nitrogen,distance in enumerate(nitrogenlist):
             if distance<1.6: 
@@ -49,7 +51,14 @@ for ts in u.trajectory:
                 theta = math.acos(z/l)
                 phi   = math.atan2(y,x)
                 #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
-                print "%f %f %f %f %f %f %f %f" %(theta,phi,x,y,z,d[0],d[1],d[2])
+#                print "%f %f %f %f %f %f %f %f" %(theta,phi,x,y,z,d[0],d[1],d[2])
+                # quick and dirty .xyz output of animated CN axis
+                cx=carbon%3*0.5*mybox[0] + 1.5*mybox[0]
+                cy=math.floor(carbon/3)*0.5*mybox[0]
+                cz=0.0
+                print "C %f %f %f" %(cx,cy,cz) #'carbon' as offset
+#                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
+                print "N %f %f %f" %(cx+d[0],cy+d[1],cz+d[2]) #With +x+y+z --> reduced form
 
 end
 
