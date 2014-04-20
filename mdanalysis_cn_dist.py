@@ -5,6 +5,8 @@
 import MDAnalysis
 import MDAnalysis.analysis
 
+import matplotlib.pyplot as plt
+
 import numpy
 import math
 from IPython import embed #iPython magic for interactive session...
@@ -16,6 +18,11 @@ u= MDAnalysis.Universe("1stframe.pdb","MAPI_222_equilibr_traj.xyz")
 
 GenThetas=True
 GenXYZ=False
+ExploitSymm=False
+Exploit8fold=True
+
+thetas=[]
+phis=[]
 
 carbons=u.selectAtoms('name C')
 nitrogens=u.selectAtoms('name N')
@@ -36,15 +43,18 @@ for ts in u.trajectory:
         for nitrogen,distance in enumerate(nitrogenlist):
             if distance<1.6: 
                 #print carbon, nitrogen, distance
-                d=carbons[carbon].pos - nitrogens[nitrogen].pos
+                cn=carbons[carbon].pos - nitrogens[nitrogen].pos
                 # Filthily hack in some orthorhombic (only) PBCs as I can't see how MDanalysis does this properly
                 for dim in 0,1,2:
-                    s=imybox[dim] * d[dim] # Minimum image convetion, algo from MDAnalysis calc_distances.h
-                    d[dim]=mybox[dim]*(s-round(s)) 
+                    s=imybox[dim] * cn[dim] # Minimum image convetion, algo from MDAnalysis calc_distances.h
+                    cn[dim]=mybox[dim]*(s-round(s)) 
  #               print d
-               
+
                 #OK; r is now our 3-vector along CN bond
-                cn=sorted(abs(d),reverse=True) #Exploit Oh symmetry - see workings in Jarv's notebooks
+                if Exploit8fold:
+                    cn=abs(cn)
+                if ExploitSymm:
+                    cn=sorted(abs(cn),reverse=True) #Exploit Oh symmetry - see workings in Jarv's notebooks
                 # (rear page of Orange book, 16-4-14)
                 #print cn,r
 
@@ -57,7 +67,9 @@ for ts in u.trajectory:
                 phi   = math.atan2(y,x)
                 #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
                 if GenThetas:
-                    print "%f %f %f %f %f %f %f %f" %(theta,phi,x,y,z,d[0],d[1],d[2])
+                #    print "%f %f %f %f %f %f %f %f" %(theta,phi,x,y,z,d[0],d[1],d[2])
+                    thetas.append(theta)
+                    phis.append(phi)
                 if GenXYZ:
                     # quick and dirty .xyz output of animated CN axis
                     cx=carbon%3*0.5*mybox[0] + 1.5*mybox[0]
@@ -66,6 +78,13 @@ for ts in u.trajectory:
                     print "C %f %f %f" %(cx,cy,cz) #'carbon' as offset
     #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
                     print "N %f %f %f" %(cx+d[0],cy+d[1],cz+d[2]) #With +x+y+z --> reduced form
+
+H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=30)
+H.shape, xedges.shape, yedges.shape
+extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
+plt.imshow(H,extent=extent,interpolation='nearest')
+plt.colorbar()
+plt.show()
 
 end
 
