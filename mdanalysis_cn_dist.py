@@ -12,12 +12,12 @@ import math
 from IPython import embed #iPython magic for interactive session...
 
 #universe item; contains all the mdanalysis stuff
-u= MDAnalysis.Universe("1stframe.pdb","MAPI_222_equilibr_traj.xyz")
+u= MDAnalysis.Universe("1stframe.pdb","Trajectory.xyz")#MAPI_222_equilibr_traj.xyz")
 
 #embed()
 
 GenThetas=True
-GenXYZ=False
+GenXYZ=True
 ExploitSymm=False
 Exploit8fold=True
 
@@ -75,9 +75,9 @@ for ts in u.trajectory:
                     cx=carbon%3*0.5*mybox[0] + 1.5*mybox[0]
                     cy=math.floor(carbon/3)*0.5*mybox[0]
                     cz=0.0
-                    print "C %f %f %f" %(cx,cy,cz) #'carbon' as offset
+                    print "  C %10.5f %10.5f %10.5f" %(cx,cy,cz) #'carbon' as offset
     #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
-                    print "N %f %f %f" %(cx+d[0],cy+d[1],cz+d[2]) #With +x+y+z --> reduced form
+                    print "  N %10.5f %10.5f %10.5f" %(cx-cn[0],cy-cn[1],cz-cn[2]) #With +x+y+z --> reduced form
 
 H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=30)
 H.shape, xedges.shape, yedges.shape
