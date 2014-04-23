@@ -21,7 +21,7 @@ u= MDAnalysis.Universe("1stframe.pdb","Trajectory.xyz")#MAPI_222_equilibr_traj.x
 
 GenThetas=False    # Theta / Phis to STDOUT for plotting externally
 GenXYZ=True        # .XYZ file to STDOUT of CN axes, for Pymol plotting
-ExploitSymm=True   # Exploit full symmetry = 42 
+ExploitSymm=True  # Exploit full symmetry = 42 
 Exploit8fold=False # Exploit 8-fold symmetry
 
 thetas=[] # List to collect data for later histogramming
@@ -36,6 +36,22 @@ imybox=1/mybox
 
 if GenThetas:
     print "# box: ",mybox, imybox
+
+def spherical_coordinates(cn):
+    cn=sorted(abs(cn),reverse=True)
+    l=numpy.linalg.norm(cn)
+    x=cn[0]
+    y=cn[1]
+    z=cn[2]
+    theta = math.acos(z/l)
+    phi   = math.atan2(y,x)
+    return (theta,phi)
+
+# Checking values returned by three symmetric alignments
+print "[1,0,0] ", spherical_coordinates(numpy.array([1,0,0]))
+print "[1,1,0] ", spherical_coordinates(numpy.array([1,1,0]))
+print "[1,1,1] ", spherical_coordinates(numpy.array([1,1,1]))
+#embed()
 
 for ts in u.trajectory:
     # Of course - this list doesn't actually change between frames; it's part of the topology
@@ -55,7 +71,7 @@ for ts in u.trajectory:
                     cn[dim]=mybox[dim]*(s-round(s)) 
  #               print d
 
-                #OK; r is now our 3-vector along CN bond
+                #OK; cn is now our 3-vector along CN bond
                 if Exploit8fold:
                     cn=abs(cn)
                 if ExploitSymm:
@@ -63,14 +79,16 @@ for ts in u.trajectory:
                 # (rear page of Orange book, 16-4-14)
                 #print cn,r
 
-                x=cn[0]
-                y=cn[1]
-                z=cn[2]
-                l=numpy.linalg.norm(cn)
+#                x=cn[0]
+#                y=cn[1]
+#                z=cn[2]
+#                l=numpy.linalg.norm(cn)
+#                theta =  math.acos(z/l)
+#                phi   = math.atan2(y,x)
+#                print "old inline code...",theta,phi
+                theta,phi = spherical_coordinates(numpy.array(cn))
+#                print "via spherical_coordinates fn...",theta,phi
 
-                theta = math.acos(z/l)
-                phi   = math.atan2(y,x)
-                
                 thetas.append(theta) #append this data point to lists
                 phis.append(phi)
 
@@ -86,7 +104,7 @@ for ts in u.trajectory:
     #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
                     print "  N %10.5f %10.5f %10.5f" %(cx-cn[0],cy-cn[1],cz-cn[2]) #With +x+y+z --> reduced form
 
-H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=30)
+H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=20)
 H.shape, xedges.shape, yedges.shape
 extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
 plt.imshow(H,extent=extent,interpolation='nearest')
