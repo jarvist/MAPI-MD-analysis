@@ -19,19 +19,21 @@ u= MDAnalysis.Universe("1stframe.pdb","Trajectory.xyz")#MAPI_222_equilibr_traj.x
 
 #embed()
 
-GenThetas=True
-GenXYZ=True
-ExploitSymm=False
-Exploit8fold=True
+GenThetas=False    # Theta / Phis to STDOUT for plotting externally
+GenXYZ=True        # .XYZ file to STDOUT of CN axes, for Pymol plotting
+ExploitSymm=True   # Exploit full symmetry = 42 
+Exploit8fold=False # Exploit 8-fold symmetry
 
-thetas=[]
+thetas=[] # List to collect data for later histogramming
 phis=[]
 
 carbons=u.selectAtoms('name C')
 nitrogens=u.selectAtoms('name N')
 
+#Hard wired cubic PBCs - the MDAnalysis readers don't seem to pick these up from PDB / XYZ files (?)
 mybox=numpy.array([12.5801704656605438,12.5477821243936827,12.5940169967174249],dtype=numpy.float32)
 imybox=1/mybox
+
 if GenThetas:
     print "# box: ",mybox, imybox
 
@@ -68,11 +70,13 @@ for ts in u.trajectory:
 
                 theta = math.acos(z/l)
                 phi   = math.atan2(y,x)
+                
+                thetas.append(theta) #append this data point to lists
+                phis.append(phi)
+
                 #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
                 if GenThetas:
-                #    print "%f %f %f %f %f %f %f %f" %(theta,phi,x,y,z,d[0],d[1],d[2])
-                    thetas.append(theta)
-                    phis.append(phi)
+                    print "%f %f %f %f %f %f %f %f" %(theta,phi,x,y,z,d[0],d[1],d[2])
                 if GenXYZ:
                     # quick and dirty .xyz output of animated CN axis
                     cx=carbon%3*0.5*mybox[0] + 1.5*mybox[0]
