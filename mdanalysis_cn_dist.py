@@ -14,6 +14,9 @@ from IPython import embed #iPython magic for interactive session...
 #universe item; contains all the mdanalysis stuff
 u= MDAnalysis.Universe("1stframe.pdb","Trajectory.xyz")#MAPI_222_equilibr_traj.xyz")
 
+# Above .XYZ file was generated with Keith Butler's Xdat2Xyz.py (depends on ASE)
+# The pdb file was generated with Open Babel
+
 #embed()
 
 GenThetas=True
