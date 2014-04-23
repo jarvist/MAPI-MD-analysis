@@ -19,8 +19,8 @@ u= MDAnalysis.Universe("1stframe.pdb","Trajectory.xyz")#MAPI_222_equilibr_traj.x
 
 #embed()
 
-GenThetas=False    # Theta / Phis to STDOUT for plotting externally
-GenXYZ=True        # .XYZ file to STDOUT of CN axes, for Pymol plotting
+GenThetas=True    # Theta / Phis to STDOUT for plotting externally
+GenXYZ=False        # .XYZ file to STDOUT of CN axes, for Pymol plotting
 ExploitSymm=True  # Exploit full symmetry = 42 
 Exploit8fold=False # Exploit 8-fold symmetry
 
@@ -94,7 +94,7 @@ for ts in u.trajectory:
 
                 #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
                 if GenThetas:
-                    print "%f %f %f %f %f %f %f %f" %(theta,phi,x,y,z,d[0],d[1],d[2])
+                    print "%f %f %f %f %f" %(theta,phi,cn[0],cn[1],cn[2])
                 if GenXYZ:
                     # quick and dirty .xyz output of animated CN axis
                     cx=carbon%3*0.5*mybox[0] + 1.5*mybox[0]
@@ -104,7 +104,7 @@ for ts in u.trajectory:
     #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
                     print "  N %10.5f %10.5f %10.5f" %(cx-cn[0],cy-cn[1],cz-cn[2]) #With +x+y+z --> reduced form
 
-H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=20)
+H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=12)
 H.shape, xedges.shape, yedges.shape
 extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
 plt.imshow(H,extent=extent,interpolation='nearest')
