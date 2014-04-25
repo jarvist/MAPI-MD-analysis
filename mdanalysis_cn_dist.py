@@ -99,9 +99,23 @@ for ts in u.trajectory:
     #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
                     print "  N %10.5f %10.5f %10.5f" %(cx-cn[0],cy-cn[1],cz-cn[2]) #With +x+y+z --> reduced form
 
+# 2D density plot of the theta/phi information
+fig=plt.figure()
+ax=fig.add_subplot(111)
+
 H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=36)
 H.shape, xedges.shape, yedges.shape
-extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
+extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
+
+#Contours - via http://micropore.wordpress.com/2011/10/01/2d-density-plot-or-2d-histogram/
+# - Data are too noisy for this to be useful. Also, they're upside down?! Weird!
+#fig.subplots_adjust(bottom=0.15,left=0.15)
+#levels = (5.0e1, 4.0e1, 3.0e1, 2.0e1)
+#cset = plt.contour(H, levels, origin='lower',colors=['black','green','blue','red'],linewidths=(1.9, 1.6, 1.5, 1.4),extent=extent)
+#plt.clabel(cset, inline=1, fontsize=10, fmt='%1.0i')
+#for c in cset.collections:
+#    c.set_linestyle('solid')
+
 plt.imshow(H,extent=extent,interpolation='nearest')
 plt.colorbar()
 plt.show()
