@@ -12,7 +12,7 @@ import math
 from IPython import embed #iPython magic for interactive session...
 
 #universe item; contains all the mdanalysis stuff
-u= MDAnalysis.Universe("1stframe.pdb","Trajectory.xyz")#MAPI_222_equilibr_traj.xyz")
+u= MDAnalysis.Universe("1stframe.pdb","process_xdatcars/aggregate_222.xyz") #Trajectory.xyz")#MAPI_222_equilibr_traj.xyz")
 
 # Above .XYZ file was generated with Keith Butler's Xdat2Xyz.py (depends on ASE)
 # The pdb file was generated with Open Babel
@@ -38,7 +38,7 @@ if GenThetas:
     print "# box: ",mybox, imybox
 
 def spherical_coordinates(cn):
-    cn=sorted(abs(cn),reverse=True)
+#    cn=sorted(abs(cn),reverse=True) #This forces symmetry exploitation. Used for figuring out what [x,y,z] corresponds to which point in the figure
     l=numpy.linalg.norm(cn)
     x=cn[0]
     y=cn[1]
@@ -69,8 +69,11 @@ for ts in u.trajectory:
                 for dim in 0,1,2:
                     s=imybox[dim] * cn[dim] # Minimum image convetion, algo from MDAnalysis calc_distances.h
                     cn[dim]=mybox[dim]*(s-round(s)) 
- #               print d
-
+#               print d
+                x=cn[0] #stash vector before we do symmetry reduction, for output
+                y=cn[1]
+                z=cn[2]
+#
                 #OK; cn is now our 3-vector along CN bond
                 if Exploit8fold:
                     cn=abs(cn)
@@ -79,22 +82,14 @@ for ts in u.trajectory:
                 # (rear page of Orange book, 16-4-14)
                 #print cn,r
 
-#                x=cn[0]
-#                y=cn[1]
-#                z=cn[2]
-#                l=numpy.linalg.norm(cn)
-#                theta =  math.acos(z/l)
-#                phi   = math.atan2(y,x)
-#                print "old inline code...",theta,phi
                 theta,phi = spherical_coordinates(numpy.array(cn))
-#                print "via spherical_coordinates fn...",theta,phi
 
                 thetas.append(theta) #append this data point to lists
                 phis.append(phi)
 
                 #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
                 if GenThetas:
-                    print "%f %f %f %f %f" %(theta,phi,cn[0],cn[1],cn[2])
+                    print "%f %f %f %f %f %f %f %f" %(theta,phi,cn[0],cn[1],cn[2],x,y,z)
                 if GenXYZ:
                     # quick and dirty .xyz output of animated CN axis
                     cx=carbon%3*0.5*mybox[0] + 1.5*mybox[0]
@@ -104,7 +99,7 @@ for ts in u.trajectory:
     #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
                     print "  N %10.5f %10.5f %10.5f" %(cx-cn[0],cy-cn[1],cz-cn[2]) #With +x+y+z --> reduced form
 
-H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=12)
+H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=36)
 H.shape, xedges.shape, yedges.shape
 extent = [yedges[0], yedges[-1], xedges[-1], xedges[0]]
 plt.imshow(H,extent=extent,interpolation='nearest')
