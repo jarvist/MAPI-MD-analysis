@@ -12,18 +12,57 @@
  set linetype  9 lc rgb "gray50"  lw 1
  set linetype cycle  9
 
+unset key
+
+set size square
+
+# Hard coded to our 2x2x2 MAPI supercell
+unitcell=12.57398
+
+set xtics 0,unitcell/4,unitcell
+set ytics 0,unitcell/4,unitcell
+
+set grid x2tics lt 8 
+set x2tics format "" 0,unitcell/2,unitcell
+
+set grid y2tics lt 8 
+set y2tics format ""  0,unitcell/2,unitcell
+
 #Purple Iodine, sickly Green Lead, orange-ish Carbon
 p "I.dat" u 2:3 w d lt 1, "Pb.dat" u 2:3 w d lt 2, "C.dat" u 2:3 w d lt 4
 
 pause -1 "OK; gonna try and output some files now - interrupt if you don't want me to :^)"
 
-set terminal png size 1024,768
+set terminal png size 1024,1024
 set size square
 set output "Pb_I_distribution.png"
 replot
 
-set terminal postscript enhanced colour 
+# Vector files enormous as so many data points...
+#set terminal postscript enhanced colour 
+#set size square
+#set output "Pb_I_distribution.ps"
+#replot
+
+set terminal x11 #I can see again!i
+
+set xtics 0,.25,1.0 #tics every .25 in fractional coordinates
+set ytics 0,.25,1.0
+
+set grid x2tics lt 9
+set x2tics format "" 0,0.5,1.0  # grid line on plot
+set grid y2tics lt 9
+set y2tics format "" 0,0.5,1.0  # grid line on plot
+
+p "I_symm.dat" u 2:3 w d lt 1, "Pb_symm.dat" u 2:3 w d lt 2, "C_symm.dat" u 2:3 w d lt 4
+
+pause -1 "OK; that should be with symm on..."
+
+pause -1 "Right; writing output files again... interrupt to prevent!"
+
+set terminal png size 1024,1024
 set size square
-set output "Pb_I_distribution.ps"
+set output "Pb_I_distribution_symm.png"
 replot
 
+# Fin!
