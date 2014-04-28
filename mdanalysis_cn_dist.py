@@ -23,7 +23,7 @@ u= MDAnalysis.Universe("1stframe.pdb","process_xdatcars/aggregate_222.xyz") #Tra
 
 GenThetas=False    # Theta / Phis to STDOUT for plotting externally
 GenXYZ=False        # .XYZ file to STDOUT of CN axes, for Pymol plotting
-ExploitSymm=True  # Exploit full symmetry = 42 
+ExploitSymm=False  # Exploit full symmetry = 42 
 Exploit8fold=False # Exploit 8-fold symmetry
 
 thetas=[] # List to collect data for later histogramming
@@ -149,6 +149,13 @@ print dotcount
 # 2D density plot of the theta/phi information
 fig=plt.figure()
 ax=fig.add_subplot(111)
+
+
+plt.hexbin(phis,thetas,gridsize=36,marginals=False,cmap=plt.cm.jet)
+plt.colorbar()
+plt.show()
+
+end
 
 phi_bins=[]
 for i in range(24):
