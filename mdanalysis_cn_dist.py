@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 
 import numpy
 import math
+import random
+
 from IPython import embed #iPython magic for interactive session...
 
 #universe item; contains all the mdanalysis stuff
@@ -51,6 +53,24 @@ def partition_alignment(cn):
 #       print "dot:", unit,numpy.dot(unit,cn),theta,phi
         dots.append(numpy.dot(unit,cn))
     dotcount[numpy.argmax(dots)]=dotcount[numpy.argmax(dots)]+1
+#    print dotcount
+
+def test_partition_alignment():
+    for i in range(100000):
+        sph = numpy.array([0.,0.,0.]) 
+        # via http://www.astro.uni-bonn.de/~mmetz/py/rndsphere.php
+        #  - though code based on the Mathworld example
+        sph[2] = random.uniform(-1.0,1.0)
+        z2     = math.sqrt(1.0 - sph[2]*sph[2])
+        phi    = (2. * math.pi) * random.random()
+        sph[0] = z2 * math.cos(phi)
+        sph[1] = z2 * math.sin(phi)
+        # apply symm...
+        #print sph
+        #sph=sorted(abs(sph),reverse=True)
+        #print sph
+        partition_alignment(sph)
+
     print dotcount
 
 def spherical_coordinates(cn):
@@ -116,6 +136,8 @@ for ts in u.trajectory:
                     print "  C %10.5f %10.5f %10.5f" %(cx,cy,cz) #'carbon' as offset
     #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
                     print "  N %10.5f %10.5f %10.5f" %(cx-cn[0],cy-cn[1],cz-cn[2]) #With +x+y+z --> reduced form
+
+print dotcount
 
 # 2D density plot of the theta/phi information
 fig=plt.figure()
