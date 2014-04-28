@@ -19,13 +19,15 @@ u= MDAnalysis.Universe("1stframe.pdb","process_xdatcars/aggregate_222.xyz") #Tra
 
 #embed()
 
-GenThetas=True    # Theta / Phis to STDOUT for plotting externally
+GenThetas=False    # Theta / Phis to STDOUT for plotting externally
 GenXYZ=False        # .XYZ file to STDOUT of CN axes, for Pymol plotting
 ExploitSymm=True  # Exploit full symmetry = 42 
 Exploit8fold=False # Exploit 8-fold symmetry
 
 thetas=[] # List to collect data for later histogramming
 phis=[]
+
+dotcount=[0.,0.,0.]
 
 carbons=u.selectAtoms('name C')
 nitrogens=u.selectAtoms('name N')
@@ -36,6 +38,20 @@ imybox=1/mybox
 
 if GenThetas:
     print "# box: ",mybox, imybox
+
+def partition_alignment(cn):
+# Dot product of cn vs. [1,0,0],[1,1,0],[1,1,1]
+#print "cn: ", cn, "theta: ", theta, "phi:", phi
+#print "[1,0,0]", numpy.dot([1,0,0],cn)
+#print "[1,1,0]", numpy.dot([math.sqrt(1./2),math.sqrt(1./2),0],cn)
+#print "[1,1,1]", numpy.dot([math.sqrt(1./3),math.sqrt(1./3),math.sqrt(1./3)],cn)
+    dots=[]
+    for unit in [1,0,0],[1,1,0],[1,1,1]:
+        unit=unit/numpy.linalg.norm(unit)
+#       print "dot:", unit,numpy.dot(unit,cn),theta,phi
+        dots.append(numpy.dot(unit,cn))
+    dotcount[numpy.argmax(dots)]=dotcount[numpy.argmax(dots)]+1
+    print dotcount
 
 def spherical_coordinates(cn):
 #    cn=sorted(abs(cn),reverse=True) #This forces symmetry exploitation. Used for figuring out what [x,y,z] corresponds to which point in the figure
@@ -59,7 +75,7 @@ for ts in u.trajectory:
     # OK, this is now the distance array of all Ns vs. Cs, considering PBCs
 #    print r
     if GenXYZ:
-        print "16\n" #header for .xyz frames
+        print "16\n" #header for .xyz frames; number of atoms per frame
     for carbon, nitrogenlist in enumerate(r):
         for nitrogen,distance in enumerate(nitrogenlist):
             if distance<1.6: 
@@ -86,6 +102,8 @@ for ts in u.trajectory:
 
                 thetas.append(theta) #append this data point to lists
                 phis.append(phi)
+
+                partition_alignment(cn)
 
                 #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
                 if GenThetas:
