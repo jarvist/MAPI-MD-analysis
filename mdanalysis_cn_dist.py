@@ -130,7 +130,7 @@ for ts in u.trajectory:
                 thetas.append(theta) #append this data point to lists
                 phis.append(phi)
 
-                partition_alignment(cn)
+#                partition_alignment(cn)
 
                 #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
                 if GenThetas:
@@ -150,7 +150,17 @@ print dotcount
 fig=plt.figure()
 ax=fig.add_subplot(111)
 
-H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=72)
+phi_bins=[]
+for i in range(24):
+    phi_bins.append( 0.3*math.pi+math.asin(i/72.))
+#theta_bins=numpy.arange(0.,math.pi/4,math.pi/72)
+
+theta_bins  =numpy.arange(0.,math.pi/4,math.pi/72)
+
+print theta_bins, phi_bins
+
+H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=36)
+H2, _, _ = numpy.histogram2d(thetas,phis,bins=[phi_bins,theta_bins])
 
 H.shape, xedges.shape, yedges.shape
 extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
@@ -167,6 +177,12 @@ extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
 plt.imshow(H,extent=extent,interpolation='nearest')
 plt.colorbar()
 plt.show()
+
+plt.imshow(H2,extent=extent,interpolation='nearest')
+plt.colorbar()
+plt.show()
+
+
 
 end
 
