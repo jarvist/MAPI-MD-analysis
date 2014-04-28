@@ -48,12 +48,19 @@ def partition_alignment(cn):
 #print "[1,1,0]", numpy.dot([math.sqrt(1./2),math.sqrt(1./2),0],cn)
 #print "[1,1,1]", numpy.dot([math.sqrt(1./3),math.sqrt(1./3),math.sqrt(1./3)],cn)
     dots=[]
+    
+    cn=cn/numpy.linalg.norm(cn) #normalise
+
     for unit in [1,0,0],[1,1,0],[1,1,1]:
         unit=unit/numpy.linalg.norm(unit)
 #       print "dot:", unit,numpy.dot(unit,cn),theta,phi
         dots.append(numpy.dot(unit,cn))
     dotcount[numpy.argmax(dots)]=dotcount[numpy.argmax(dots)]+1
 #    print dotcount
+    print cn[0],cn[1],cn[2],numpy.argmax(dots) #x,y,z, which type (for colour)
+    print "FaceTheta: ", math.acos(min(dots[0],1.0)) #fix to domain errors as dots[] creeping above 1.0
+    print "EdgeTheta: ", math.acos(min(dots[1],1.0))
+    print "DiagTheta: ", math.acos(min(dots[2],1.0))
 
 def test_partition_alignment():
     for i in range(100000):
@@ -143,7 +150,8 @@ print dotcount
 fig=plt.figure()
 ax=fig.add_subplot(111)
 
-H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=36)
+H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=72)
+
 H.shape, xedges.shape, yedges.shape
 extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
 
