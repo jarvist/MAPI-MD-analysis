@@ -23,7 +23,7 @@ u= MDAnalysis.Universe("1stframe.pdb","process_xdatcars/aggregate_222.xyz") #Tra
 
 GenThetas=False    # Theta / Phis to STDOUT for plotting externally
 GenXYZ=False        # .XYZ file to STDOUT of CN axes, for Pymol plotting
-ExploitSymm=False  # Exploit full symmetry = 42 
+ExploitSymm=True  # Exploit full symmetry = 48 fold
 Exploit8fold=False # Exploit 8-fold symmetry
 
 thetas=[] # List to collect data for later histogramming
@@ -153,7 +153,31 @@ ax=fig.add_subplot(111)
 
 plt.hexbin(phis,thetas,gridsize=36,marginals=False,cmap=plt.cm.jet)
 plt.colorbar()
+pi=numpy.pi
+
+# Full spherical coordinate axes
+#plt.xticks( [-pi,-pi/2,0,pi/2,pi],
+#            [r'$-\pi$',r'$-\pi/2$',r'$0$',r'$\pi/2$',r'$\pi$'],
+#            fontsize=14)
+#plt.yticks( [0,pi/2,pi],
+#            [r'$0$',r'$\pi/2$',r'$\pi$'],
+#            fontsize=14)
+
+# Full symm axes
+plt.xticks( [0,pi/4],
+            [r'$0$',r'$\pi/4$'],
+            fontsize=14)
+plt.yticks( [0.9553166181245,pi/2],
+            [r'$arcos(\frac{1}{\sqrt{3}})$',r'$\pi/2$'],
+            fontsize=14)
+
+
+
 plt.show()
+
+fig.savefig("mdanalysis_cn_dist.png",bbox_inches='tight', pad_inches=0)
+fig.savefig("mdanalysis_cn_dist.pdf",bbox_inches='tight', pad_inches=0)
+
 
 end
 
