@@ -164,11 +164,11 @@ pi=numpy.pi
 #            fontsize=14)
 
 # Full symm axes
-plt.xticks( [0,pi/4],
+plt.xticks( [0.01,pi/4], 
             [r'$0$',r'$\pi/4$'],
             fontsize=14)
 plt.yticks( [0.9553166181245,pi/2],
-            [r'$arcos(\frac{1}{\sqrt{3}})$',r'$\pi/2$'],
+            [r'$0.96$',r'$\pi/2$'],
             fontsize=14)
 
 
@@ -176,8 +176,8 @@ plt.yticks( [0.9553166181245,pi/2],
 plt.show()
 
 fig.savefig("mdanalysis_cn_dist.png",bbox_inches='tight', pad_inches=0)
-fig.savefig("mdanalysis_cn_dist.pdf",bbox_inches='tight', pad_inches=0)
-
+#fig.savefig("mdanalysis_cn_dist.pdf",bbox_inches='tight', pad_inches=0)
+fig.savefig("mdanalysis_cn_dist.eps",bbox_inches='tight', pad_inches=0.2)
 
 end
 
