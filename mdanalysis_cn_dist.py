@@ -50,17 +50,18 @@ def partition_alignment(cn):
     dots=[]
     
     cn=cn/numpy.linalg.norm(cn) #normalise
+    sm=sorted(abs(cn),reverse=True)
 
     for unit in [1,0,0],[1,1,0],[1,1,1]:
         unit=unit/numpy.linalg.norm(unit)
 #       print "dot:", unit,numpy.dot(unit,cn),theta,phi
-        dots.append(numpy.dot(unit,cn))
+        dots.append(numpy.dot(unit,sm))
     dotcount[numpy.argmax(dots)]=dotcount[numpy.argmax(dots)]+1
 #    print dotcount
     print cn[0],cn[1],cn[2],numpy.argmax(dots) #x,y,z, which type (for colour)
-    print "FaceTheta: ", math.acos(min(dots[0],1.0)) #fix to domain errors as dots[] creeping above 1.0
-    print "EdgeTheta: ", math.acos(min(dots[1],1.0))
-    print "DiagTheta: ", math.acos(min(dots[2],1.0))
+#    print "FaceTheta: ", math.acos(min(dots[0],1.0)) #fix to domain errors as dots[] creeping above 1.0
+#    print "EdgeTheta: ", math.acos(min(dots[1],1.0))
+#    print "DiagTheta: ", math.acos(min(dots[2],1.0))
 
 def test_partition_alignment():
     for i in range(100000):
@@ -96,6 +97,9 @@ print "[1,1,0] ", spherical_coordinates(numpy.array([1,1,0]))
 print "[1,1,1] ", spherical_coordinates(numpy.array([1,1,1]))
 #embed()
 
+#test_partition_alignment()
+#end
+
 for ts in u.trajectory:
     # Of course - this list doesn't actually change between frames; it's part of the topology
     r=MDAnalysis.analysis.distances.distance_array(carbons.coordinates(),nitrogens.coordinates(),mybox)
@@ -130,7 +134,7 @@ for ts in u.trajectory:
                 thetas.append(theta) #append this data point to lists
                 phis.append(phi)
 
-#                partition_alignment(cn)
+                partition_alignment(cn)
 
                 #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
                 if GenThetas:
