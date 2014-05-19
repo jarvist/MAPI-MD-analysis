@@ -99,6 +99,7 @@ print "[1,1,1] ", spherical_coordinates(numpy.array([1,1,1]))
 
 #test_partition_alignment()
 #end
+cns=[]
 
 for ts in u.trajectory:
     # Of course - this list doesn't actually change between frames; it's part of the topology
@@ -127,122 +128,24 @@ for ts in u.trajectory:
                 if ExploitSymm:
                     cn=sorted(abs(cn),reverse=True) #Exploit Oh symmetry - see workings in Jarv's notebooks
                 # (rear page of Orange book, 16-4-14)
+                
                 #print cn,r
+                cn=cn/numpy.linalg.norm(cn) #normalise
+                if carbon==1:
+                    cns.append(cn)
 
-                theta,phi = spherical_coordinates(numpy.array(cn))
+T=1000 #time steps over which to calculate correlation
+correlation=numpy.zeros(T)
+for i in xrange(len(cns)-T):
+    for t in xrange(T):
+#        print i, t
+        correlation[t]=correlation[t]+numpy.dot(cns[i],cns[t+i])
+correlation=correlation/(len(cns)-T)
 
-                thetas.append(theta) #append this data point to lists
-                phis.append(phi)
+print correlation
 
-                partition_alignment(cn)
-
-                #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
-                if GenThetas:
-                    print "%f %f %f %f %f %f %f %f" %(theta,phi,cn[0],cn[1],cn[2],x,y,z)
-                if GenXYZ:
-                    # quick and dirty .xyz output of animated CN axis
-                    cx=carbon%3*0.5*mybox[0] + 1.5*mybox[0]
-                    cy=math.floor(carbon/3)*0.5*mybox[0]
-                    cz=0.0
-                    print "  C %10.5f %10.5f %10.5f" %(cx,cy,cz) #'carbon' as offset
-    #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
-                    print "  N %10.5f %10.5f %10.5f" %(cx-cn[0],cy-cn[1],cz-cn[2]) #With +x+y+z --> reduced form
-
-print dotcount
-
-# 2D density plot of the theta/phi information
 fig=plt.figure()
 ax=fig.add_subplot(111)
 
-
-plt.hexbin(phis,thetas,gridsize=36,marginals=False,cmap=plt.cm.jet)
-plt.colorbar()
-pi=numpy.pi
-
-# Full spherical coordinate axes
-#plt.xticks( [-pi,-pi/2,0,pi/2,pi],
-#            [r'$-\pi$',r'$-\pi/2$',r'$0$',r'$\pi/2$',r'$\pi$'],
-#            fontsize=14)
-#plt.yticks( [0,pi/2,pi],
-#            [r'$0$',r'$\pi/2$',r'$\pi$'],
-#            fontsize=14)
-
-# Full symm axes
-plt.xticks( [0.01,pi/4], 
-            [r'$0$',r'$\pi/4$'],
-            fontsize=14)
-plt.yticks( [0.9553166181245,pi/2],
-            [r'$0.96$',r'$\pi/2$'],
-            fontsize=14)
-
-
-
+plt.plot(correlation)
 plt.show()
-
-fig.savefig("mdanalysis_cn_dist.png",bbox_inches='tight', pad_inches=0)
-#fig.savefig("mdanalysis_cn_dist.pdf",bbox_inches='tight', pad_inches=0)
-fig.savefig("mdanalysis_cn_dist.eps",bbox_inches='tight', pad_inches=0.2)
-
-end
-
-phi_bins=[]
-for i in range(24):
-    phi_bins.append( 0.3*math.pi+math.asin(i/72.))
-#theta_bins=numpy.arange(0.,math.pi/4,math.pi/72)
-
-theta_bins  =numpy.arange(0.,math.pi/4,math.pi/72)
-
-print theta_bins, phi_bins
-
-H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=36)
-H2, _, _ = numpy.histogram2d(thetas,phis,bins=[phi_bins,theta_bins])
-
-H.shape, xedges.shape, yedges.shape
-extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
-
-#Contours - via http://micropore.wordpress.com/2011/10/01/2d-density-plot-or-2d-histogram/
-# - Data are too noisy for this to be useful. Also, they're upside down?! Weird!
-#fig.subplots_adjust(bottom=0.15,left=0.15)
-#levels = (5.0e1, 4.0e1, 3.0e1, 2.0e1)
-#cset = plt.contour(H, levels, origin='lower',colors=['black','green','blue','red'],linewidths=(1.9, 1.6, 1.5, 1.4),extent=extent)
-#plt.clabel(cset, inline=1, fontsize=10, fmt='%1.0i')
-#for c in cset.collections:
-#    c.set_linestyle('solid')
-
-plt.imshow(H,extent=extent,interpolation='nearest')
-plt.colorbar()
-plt.show()
-
-plt.imshow(H2,extent=extent,interpolation='nearest')
-plt.colorbar()
-plt.show()
-
-
-
-end
-
-for ts in u.trajectory:
-    for c in carbons:
-        for n in nitrogens:
-            r=c.pos - n.pos
-            print r
-            #embed()
-            print c,n,r
-            d=numpy.linalg.norm(r)
-            if (d<1.8): #i.e. these are near bonds. TODO: PBCs _NOT_ treated properly.
-                #print ts.frame,d,r
-                #OK; r is now our 3-vector along CN bond
-                cn=sorted(abs(r),reverse=True) #Exploit Oh symmetry - see workings in Jarv's notebooks
-                # (rear page of Orange book, 16-4-14)
-                #print cn,r
-
-                x=cn[0]
-                y=cn[1]
-                z=cn[2]
-
-                theta = math.acos(z/d)
-                phi   = math.atan2(y,x)
-                #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
-                #theta = theta % math.pi/4
-                #phi   = phi % math.pi/4
-                print "%f %f %f %f %f" %(theta,phi,x,y,z)
