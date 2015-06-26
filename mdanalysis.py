@@ -1,5 +1,6 @@
-# mdanalysis_cn_dist.py - Jarvist Moore Frost April 2014
+# mdanalysis_cn_dist.py - Jarvist Moore Frost April 2014 -- June 2015
 #  Scripts to analyise CN axis orientation from Ab-Initio MD on MAPI
+#  Updated & generalised to analyse FAPI June 2015
 
 #When using MDAnalysis in published work, please cite doi:10.1002/jcc.21787
 import MDAnalysis
@@ -11,10 +12,6 @@ import numpy
 import math
 import random
 
-#from IPython import embed #iPython magic for interactive session...
-import datetime # current date for log files etc.
-now=datetime.datetime.now().strftime("%Y-%m-%d-%Hh%Mm") #String of standardised year-leading time
-
 import sys
 if (len(sys.argv)>1):
     trajfilename=sys.argv[1]
@@ -22,6 +19,13 @@ else:
     trajfilename="300K.xyz"
 
 print 'Argument List:', str(sys.argv), " Trajectory filename: ", trajfilename
+
+#from IPython import embed #iPython magic for interactive session...
+import datetime # current date for log files etc.
+now=datetime.datetime.now().strftime("%Y-%m-%d-%Hh%Mm") #String of standardised year-leading time
+fileprefix= now + "-" + trajfilename.rsplit( ".", 1 )[ 0 ]  # regexp to get filename.ext --> filename
+
+print 'Filename prefix: ', fileprefix
 
 #universe item; contains all the mdanalysis stuff
 u= MDAnalysis.Universe("300K.pdb",trajfilename) #Trajectory.xyz")#MAPI_222_equilibr_traj.xyz")
@@ -209,8 +213,8 @@ def correlation():
     ax.set_ylabel(r'$r_{T}.r_{T+\Delta t}$')
 
     plt.show()
-    fig.savefig("%s-mdanalysis_FAPI_correlation_averages.pdf"%now)
-    fig.savefig("%s-mdanalysis_FAPI_correlation_averages.png"%now)
+    fig.savefig("%s-correlation_averages.pdf"%fileprefix)
+    fig.savefig("%s-correlation_averages.png"%fileprefix)
 
     print("OK; calculating autocorrelation, time to cross zero.")
     print ("   alternative analysis, time till cns[i].cns[i+dt] < 0.0 (i.e. falls off to 90 degrees)")
@@ -241,8 +245,8 @@ def correlation():
     ax.set_ylabel(r'$r_{T}.r_{T+\Delta t}<0.0 ?$')
 
     plt.show()
-    fig.savefig("%s-mdanalysis_FAPI_correlation_timetocrosszero.pdf"%now)
-    fig.savefig("%s-mdanalysis_FAPI_correlation_timetocrosszero.png"%now)
+    fig.savefig("%s-correlation_timetocrosszero.pdf"%fileprefix)
+    fig.savefig("%s-correlation_timetocrosszero.png"%fileprefix)
 
 ### OTHER FILE ###
 
@@ -274,9 +278,9 @@ def orientation_density():
 
     plt.show()
 
-    fig.savefig("%s-mdanalysis_FAPI_orient.png"%now,bbox_inches='tight', pad_inches=0)
-#   fig.savefig("%s-mdanalysis_cn_dist.pdf"%now,bbox_inches='tight', pad_inches=0)
-    fig.savefig("%s-mdanalysis_FAPI_orient.eps"%now,bbox_inches='tight', pad_inches=0.2)
+    fig.savefig("%s-orientation_density.png"%fileprefix,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-orientation_density.pdf"%fileprefix,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-orientation_density.eps"%fileprefix,bbox_inches='tight', pad_inches=0.2)
 
 
 print("Calculating orientation density...")
