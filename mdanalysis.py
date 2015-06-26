@@ -110,6 +110,7 @@ def spherical_coordinates(cn):
     z=cn[2]
     theta = math.acos(z/l)
     phi   = math.atan2(y,x)
+    theta   = theta - math.pi/2 #to agree with Matplotlib view of angles...
     return (theta,phi)
 
 print ("Checking symmetry reduced values returned by three symmetric alignments")
@@ -283,15 +284,39 @@ def orientation_density():
     plt.xticks( [-pi,-pi/2,0,pi/2,pi],
                 [r'$-\pi$',r'$-\pi/2$',r'$0$',r'$\pi/2$',r'$\pi$'],
                 fontsize=14)
-    plt.yticks( [0,pi/2,pi],
-                [r'$0$',r'$\pi/2$',r'$\pi$'],
+    plt.yticks( [-pi/2,0,pi/2],
+                [r'$-\pi/2$',r'$0$',r'$\pi/2$'],
                 fontsize=14)
 
     if (DisplayFigures):
         plt.show()
-    fig.savefig("%s-orientation_density_nosymm.png"%fileprefix,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-orientation_density_nosymm.png"%fileprefix,bbox_inches='tight', pad_inches=0,dpi=200)
     fig.savefig("%s-orientation_density_nosymm.pdf"%fileprefix,bbox_inches='tight', pad_inches=0)
     fig.savefig("%s-orientation_density_nosymm.eps"%fileprefix,bbox_inches='tight', pad_inches=0.2)
+    
+    # 2D density plot of the theta/phi information - MOLLWEIDE projection
+    fig=plt.figure()
+    ax=fig.add_subplot(111,projection = 'mollweide')
+
+    plt.hexbin(phis,thetas,gridsize=36,marginals=False,cmap=plt.cm.cubehelix_r) #PuRd) #cmap=plt.cm.jet)
+
+    plt.colorbar()
+    pi=numpy.pi
+
+# Full spherical coordinate axes
+#    plt.xticks( [-pi,-pi/2,0,pi/2,pi],
+#                [r'$-\pi$',r'$-\pi/2$',r'$0$',r'$\pi/2$',r'$\pi$'],
+#                fontsize=14)
+#    plt.yticks( [0,pi/2,pi],
+#                [r'$0$',r'$\pi/2$',r'$\pi$'],
+#                fontsize=14)
+    plt.xticks([],[])
+
+    if (DisplayFigures):
+        plt.show()
+    fig.savefig("%s-orientation_density_nosymm_mollweide.png"%fileprefix,bbox_inches='tight', pad_inches=0,dpi=200)
+    fig.savefig("%s-orientation_density_nosymm_mollweide.pdf"%fileprefix,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-orientation_density_nosymm_mollweide.eps"%fileprefix,bbox_inches='tight', pad_inches=0.2)
     
     fig=plt.figure()
     ax=fig.add_subplot(111)
@@ -305,13 +330,14 @@ def orientation_density():
                 [r'$0$',r'$\pi/4$'],
                 fontsize=14)
     # Now _THAT_ is a magic number. 
-    plt.yticks( [0.9553166181245,pi/2],
-                [r'$0.96$',r'$\pi/2$'],
+    #  (OK, actually it's a Trig identity, just a bit of a complex one)
+    plt.yticks( [-0.6154797,-0.01],
+                [r'$-0.62$',r'$0$'],
                 fontsize=14)
     
     if (DisplayFigures):
         plt.show()
-    fig.savefig("%s-orientation_density_Oh_symm.png"%fileprefix,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-orientation_density_Oh_symm.png"%fileprefix,bbox_inches='tight', pad_inches=0,dpi=200)
     fig.savefig("%s-orientation_density_Oh_symm.pdf"%fileprefix,bbox_inches='tight', pad_inches=0)
     fig.savefig("%s-orientation_density_Oh_symm.eps"%fileprefix,bbox_inches='tight', pad_inches=0.2)
  
@@ -322,5 +348,5 @@ sys.stdout.flush()
 orientation_density()
 print("Calculating correlation...")
 sys.stdout.flush()
-correlation()
+#correlation()
 
