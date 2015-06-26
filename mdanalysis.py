@@ -11,9 +11,11 @@ import numpy
 import math
 import random
 
-from IPython import embed #iPython magic for interactive session...
-import sys
+#from IPython import embed #iPython magic for interactive session...
+import datetime # current date for log files etc.
+now=datetime.datetime.now().strftime("%Y-%m-%d-%Hh%Mm") #String of standardised year-leading time
 
+import sys
 if (len(sys.argv)>1):
     trajfilename=sys.argv[1]
 else:
@@ -22,7 +24,7 @@ else:
 print 'Argument List:', str(sys.argv), " Trajectory filename: ", trajfilename
 
 #universe item; contains all the mdanalysis stuff
-u= MDAnalysis.Universe("300K.pdb",trajfilename) 
+u= MDAnalysis.Universe("300K.pdb",trajfilename) #Trajectory.xyz")#MAPI_222_equilibr_traj.xyz")
 
 # Above .XYZ file was generated with Keith Butler's Xdat2Xyz.py (depends on ASE)
 # The pdb file was generated with Open Babel
@@ -31,7 +33,7 @@ u= MDAnalysis.Universe("300K.pdb",trajfilename)
 
 GenThetas=False    # Theta / Phis to STDOUT for plotting externally
 GenXYZ=False        # .XYZ file to STDOUT of CN axes, for Pymol plotting
-ExploitSymm=False # Exploit full symmetry = 48 fold
+ExploitSymm=False  # Exploit full symmetry = 48 fold
 Exploit8fold=False # Exploit 8-fold symmetry
 
 thetas=[] # List to collect data for later histogramming
@@ -40,7 +42,9 @@ phis=[]
 dotcount=[0.,0.,0.]
 
 carbons=u.selectAtoms('name C')
-nitrogens=u.selectAtoms('name H') # Formadinium - look along C-H axis
+nitrogens=u.selectAtoms('name H') 
+# Formamidinium - look along C-H axis
+# Methylammonium - only axis is C-N
 
 # FAPI 2x2x2 supercell
 #  1.0000000000000000
@@ -105,7 +109,7 @@ def spherical_coordinates(cn):
     phi   = math.atan2(y,x)
     return (theta,phi)
 
-# Checking values returned by three symmetric alignments
+print ("Checking symmetry reduced values returned by three symmetric alignments")
 print "[1,0,0] ", spherical_coordinates(numpy.array([1,0,0]))
 print "[1,1,0] ", spherical_coordinates(numpy.array([1,1,0]))
 print "[1,1,1] ", spherical_coordinates(numpy.array([1,1,1]))
@@ -113,8 +117,13 @@ print "[1,1,1] ", spherical_coordinates(numpy.array([1,1,1]))
 
 #test_partition_alignment()
 #end
+cnsn=numpy.zeros(shape=(u.trajectory.numframes,8,3))
 
+print("Loading Trajectory... ['.' = 100 frames]")
 for ts in u.trajectory:
+    if(ts.frame%100==0):
+        sys.stdout.write('.') #Dprint ('.',) 
+        sys.stdout.flush()
     # Of course - this list doesn't actually change between frames; it's part of the topology
     r=MDAnalysis.analysis.distances.distance_array(carbons.coordinates(),nitrogens.coordinates(),mybox)
     # OK, this is now the distance array of all Ns vs. Cs, considering PBCs
@@ -136,21 +145,26 @@ for ts in u.trajectory:
                 z=cn[2]
 #
                 #OK; cn is now our 3-vector along CN bond
+               
+                #print cn,r
+                cn=cn/numpy.linalg.norm(cn) #normalise; needed for orientation work
+#                print ts.frame,carbon,cn
+                cnsn[ts.frame-1,carbon]=cn #-1 to array index from 0; THIS STORES VALUES FOR CORRELATION
+                
+                # Now apply symmetry operations for looking at absolute orientation...
                 if Exploit8fold:
                     cn=abs(cn)
                 if ExploitSymm:
                     cn=sorted(abs(cn),reverse=True) #Exploit Oh symmetry - see workings in Jarv's notebooks
                 # (rear page of Orange book, 16-4-14)
-                #print cn,r
-
-                theta,phi = spherical_coordinates(numpy.array(cn))
-
+ 
+                theta,phi = spherical_coordinates(numpy.array(cn)) # Values used for ORIENTATION 
                 thetas.append(theta) #append this data point to lists
                 phis.append(phi)
 
-                partition_alignment(cn)
+                partition_alignment(cn) # Can anyone remember what this does?!
 
-                #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
+                #Optional output routines...
                 if GenThetas:
                     print "%f %f %f %f %f %f %f %f" %(theta,phi,cn[0],cn[1],cn[2],x,y,z)
                 if GenXYZ:
@@ -162,16 +176,84 @@ for ts in u.trajectory:
     #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
                     print "  N %10.5f %10.5f %10.5f" %(cx-cn[0],cy-cn[1],cz-cn[2]) #With +x+y+z --> reduced form
 
-print dotcount
+print()
+print "Found ", len(cnsn), " alignment vectors." # Print out what we found...
 
-# 2D density plot of the theta/phi information
-fig=plt.figure()
-ax=fig.add_subplot(111)
+print("OK, loaded Trajectory and generated alignment vectors. ")
 
+### ANALYSIS code below here; from merged files
 
-plt.hexbin(phis,thetas,gridsize=36,marginals=False,cmap=plt.cm.jet)
-plt.colorbar()
-pi=numpy.pi
+def correlation():
+    print("Now calculating correlations as a function of time.")
+    T=1000 #time steps over which to calculate correlation
+    correlation=numpy.zeros(T)
+
+    for carbon,nitrogenlist in enumerate(r): #iterate over all MA ions
+        print("Ions: %d Calculating correlation."%(carbon))
+        for i in xrange(u.trajectory.numframes-T): #over number of frames - time to collect data
+            for dt in xrange(T): #
+#           print i, t
+                correlation[dt]=correlation[dt]+numpy.dot(cnsn[i,carbon],cnsn[i+dt,carbon]) 
+                #Here comes the science bit, concentrate!
+    correlation=correlation/((u.trajectory.numframes-T)*8.0) # hard coded number of MA ions
+
+    print correlation
+
+    fig=plt.figure()
+    ax=fig.add_subplot(111)
+
+    plt.plot(correlation)
+
+    ax.set_title("Dot Product correlation of FA-vector")
+    ax.set_xlabel(r'$\Delta t$, frames')
+    ax.set_ylabel(r'$r_{T}.r_{T+\Delta t}$')
+
+    plt.show()
+    fig.savefig("%s-mdanalysis_FAPI_correlation_averages.pdf"%now)
+    fig.savefig("%s-mdanalysis_FAPI_correlation_averages.png"%now)
+
+    print("OK; calculating autocorrelation, time to cross zero.")
+    print ("   alternative analysis, time till cns[i].cns[i+dt] < 0.0 (i.e. falls off to 90 degrees)")
+
+    timetozero=[] #list of times to fall to zero
+
+    for carbon,nitrogenlist in enumerate(r):
+        print("Ion: %d Calculating dot-product correlation."%(carbon))
+        for i in xrange(u.trajectory.numframes):
+            for dt in xrange (u.trajectory.numframes-i):
+#                print i,dt,numpy.dot(cns[i],cns[i+dt])
+#            print cnsn[i,carbon],cnsn[i+dt,carbon],numpy.dot(cnsn[i,carbon],cnsn[i+dt,carbon])
+                if (numpy.dot(cnsn[i,carbon],cnsn[i+dt,carbon])<0.0):
+                    timetozero.append(dt)
+                    break
+    print "Total frames, ", u.trajectory.numframes
+    print "Sum time to zero, ", sum(timetozero)
+    print "Length time to zero, ", len(timetozero)
+    print "Average number of frames: \n", (sum(timetozero)/len(timetozero))
+
+    fig=plt.figure()
+    ax=fig.add_subplot(111)
+
+    plt.hist(timetozero,100,histtype='stepfilled') # we have quite a lot of data here; so 100 bins
+
+    ax.set_title("Dot Product correlation of FA-vector, time to cross zero")
+    ax.set_xlabel(r'$\Delta t$, frames')
+    ax.set_ylabel(r'$r_{T}.r_{T+\Delta t}<0.0 ?$')
+
+    plt.show()
+    fig.savefig("%s-mdanalysis_FAPI_correlation_timetocrosszero.pdf"%now)
+    fig.savefig("%s-mdanalysis_FAPI_correlation_timetocrosszero.png"%now)
+
+### OTHER FILE ###
+
+def orientation_density():
+    # 2D density plot of the theta/phi information
+    fig=plt.figure()
+    ax=fig.add_subplot(111)
+
+    plt.hexbin(phis,thetas,gridsize=36,marginals=False,cmap=plt.cm.jet)
+    plt.colorbar()
+    pi=numpy.pi
 
 # Full spherical coordinate axes
 #plt.xticks( [-pi,-pi/2,0,pi/2,pi],
@@ -181,82 +263,24 @@ pi=numpy.pi
 #            [r'$0$',r'$\pi/2$',r'$\pi$'],
 #            fontsize=14)
 
-# Full symm axes
-plt.xticks( [0.01,pi/4], 
-            [r'$0$',r'$\pi/4$'],
-            fontsize=14)
-plt.yticks( [0.9553166181245,pi/2],
-            [r'$0.96$',r'$\pi/2$'],
-            fontsize=14)
+    # Full symm axes
+    plt.xticks( [0.01,pi/4], 
+                [r'$0$',r'$\pi/4$'],
+                fontsize=14)
+    # Now _THAT_ is a magic number. 
+    plt.yticks( [0.9553166181245,pi/2],
+                [r'$0.96$',r'$\pi/2$'],
+                fontsize=14)
+
+    plt.show()
+
+    fig.savefig("%s-mdanalysis_FAPI_orient.png"%now,bbox_inches='tight', pad_inches=0)
+#   fig.savefig("%s-mdanalysis_cn_dist.pdf"%now,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-mdanalysis_FAPI_orient.eps"%now,bbox_inches='tight', pad_inches=0.2)
 
 
+print("Calculating orientation density...")
+orientation_density()
+print("Calculating correlation...")
+correlation()
 
-plt.show()
-
-fig.savefig("mdanalysis_FAPI_orient.png",bbox_inches='tight', pad_inches=0)
-#fig.savefig("mdanalysis_cn_dist.pdf",bbox_inches='tight', pad_inches=0)
-fig.savefig("mdanalysis_FAPI_orient.eps",bbox_inches='tight', pad_inches=0.2)
-
-end
-
-phi_bins=[]
-for i in range(24):
-    phi_bins.append( 0.3*math.pi+math.asin(i/72.))
-#theta_bins=numpy.arange(0.,math.pi/4,math.pi/72)
-
-theta_bins  =numpy.arange(0.,math.pi/4,math.pi/72)
-
-print theta_bins, phi_bins
-
-H,xedges,yedges = numpy.histogram2d(thetas,phis,bins=36)
-H2, _, _ = numpy.histogram2d(thetas,phis,bins=[phi_bins,theta_bins])
-
-H.shape, xedges.shape, yedges.shape
-extent = [yedges[0], yedges[-1], xedges[0], xedges[-1]]
-
-#Contours - via http://micropore.wordpress.com/2011/10/01/2d-density-plot-or-2d-histogram/
-# - Data are too noisy for this to be useful. Also, they're upside down?! Weird!
-#fig.subplots_adjust(bottom=0.15,left=0.15)
-#levels = (5.0e1, 4.0e1, 3.0e1, 2.0e1)
-#cset = plt.contour(H, levels, origin='lower',colors=['black','green','blue','red'],linewidths=(1.9, 1.6, 1.5, 1.4),extent=extent)
-#plt.clabel(cset, inline=1, fontsize=10, fmt='%1.0i')
-#for c in cset.collections:
-#    c.set_linestyle('solid')
-
-plt.imshow(H,extent=extent,interpolation='nearest')
-plt.colorbar()
-plt.show()
-
-plt.imshow(H2,extent=extent,interpolation='nearest')
-plt.colorbar()
-plt.show()
-
-
-
-end
-
-for ts in u.trajectory:
-    for c in carbons:
-        for n in nitrogens:
-            r=c.pos - n.pos
-            print r
-            #embed()
-            print c,n,r
-            d=numpy.linalg.norm(r)
-            if (d<1.8): #i.e. these are near bonds. TODO: PBCs _NOT_ treated properly.
-                #print ts.frame,d,r
-                #OK; r is now our 3-vector along CN bond
-                cn=sorted(abs(r),reverse=True) #Exploit Oh symmetry - see workings in Jarv's notebooks
-                # (rear page of Orange book, 16-4-14)
-                #print cn,r
-
-                x=cn[0]
-                y=cn[1]
-                z=cn[2]
-
-                theta = math.acos(z/d)
-                phi   = math.atan2(y,x)
-                #OK, now we fold along theta, phi, to account for symmetry (TODO: Check!)
-                #theta = theta % math.pi/4
-                #phi   = phi % math.pi/4
-                print "%f %f %f %f %f" %(theta,phi,x,y,z)
