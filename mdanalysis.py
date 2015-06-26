@@ -23,7 +23,7 @@ print 'Argument List:', str(sys.argv), " Trajectory filename: ", trajfilename
 #from IPython import embed #iPython magic for interactive session...
 import datetime # current date for log files etc.
 now=datetime.datetime.now().strftime("%Y-%m-%d-%Hh%Mm") #String of standardised year-leading time
-fileprefix= now + "-" + trajfilename.rsplit( ".", 1 )[ 0 ]  # regexp to get filename.ext --> filename
+fileprefix= now + "-" + trajfilename.rsplit( ".", 1 )[ 0 ] + "-mdanalysis"  # regexp to get filename.ext --> filename
 
 print 'Filename prefix: ', fileprefix
 
@@ -37,11 +37,10 @@ u= MDAnalysis.Universe("300K.pdb",trajfilename) #Trajectory.xyz")#MAPI_222_equil
 
 GenThetas=False    # Theta / Phis to STDOUT for plotting externally
 GenXYZ=False        # .XYZ file to STDOUT of CN axes, for Pymol plotting
-ExploitSymm=False  # Exploit full symmetry = 48 fold
-Exploit8fold=False # Exploit 8-fold symmetry
+#ExploitSymm=False  # Exploit full symmetry = 48 fold
+#Exploit8fold=False # Exploit 8-fold symmetry
 
-thetas=[] # List to collect data for later histogramming
-phis=[]
+DisplayFigures=False # interrupt program with matplotlib, or just silent write to file?
 
 dotcount=[0.,0.,0.]
 
@@ -101,7 +100,7 @@ def test_partition_alignment():
         #print sph
         partition_alignment(sph)
 
-    print dotcount
+    #print dotcount
 
 def spherical_coordinates(cn):
 #    cn=sorted(abs(cn),reverse=True) #This forces symmetry exploitation. Used for figuring out what [x,y,z] corresponds to which point in the figure
@@ -126,7 +125,7 @@ cnsn=numpy.zeros(shape=(u.trajectory.numframes,8,3))
 print("Loading Trajectory... ['.' = 100 frames]")
 for ts in u.trajectory:
     if(ts.frame%100==0):
-        sys.stdout.write('.') #Dprint ('.',) 
+        sys.stdout.write('.') 
         sys.stdout.flush()
     # Of course - this list doesn't actually change between frames; it's part of the topology
     r=MDAnalysis.analysis.distances.distance_array(carbons.coordinates(),nitrogens.coordinates(),mybox)
@@ -155,17 +154,6 @@ for ts in u.trajectory:
 #                print ts.frame,carbon,cn
                 cnsn[ts.frame-1,carbon]=cn #-1 to array index from 0; THIS STORES VALUES FOR CORRELATION
                 
-                # Now apply symmetry operations for looking at absolute orientation...
-                if Exploit8fold:
-                    cn=abs(cn)
-                if ExploitSymm:
-                    cn=sorted(abs(cn),reverse=True) #Exploit Oh symmetry - see workings in Jarv's notebooks
-                # (rear page of Orange book, 16-4-14)
- 
-                theta,phi = spherical_coordinates(numpy.array(cn)) # Values used for ORIENTATION 
-                thetas.append(theta) #append this data point to lists
-                phis.append(phi)
-
                 partition_alignment(cn) # Can anyone remember what this does?!
 
                 #Optional output routines...
@@ -180,10 +168,11 @@ for ts in u.trajectory:
     #                print "N %f %f %f" %(cx+x,cy+y,cz+z) #With +x+y+z --> reduced form
                     print "  N %10.5f %10.5f %10.5f" %(cx-cn[0],cy-cn[1],cz-cn[2]) #With +x+y+z --> reduced form
 
-print()
+print(" OK...")
 print "Found ", len(cnsn), " alignment vectors." # Print out what we found...
 
-print("OK, loaded Trajectory and generated alignment vectors. ")
+print("Loaded Trajectory and generated alignment vectors. ")
+sys.stdout.flush()
 
 ### ANALYSIS code below here; from merged files
 
@@ -194,6 +183,7 @@ def correlation():
 
     for carbon,nitrogenlist in enumerate(r): #iterate over all MA ions
         print("Ions: %d Calculating correlation."%(carbon))
+        sys.stdout.flush()
         for i in xrange(u.trajectory.numframes-T): #over number of frames - time to collect data
             for dt in xrange(T): #
 #           print i, t
@@ -201,7 +191,7 @@ def correlation():
                 #Here comes the science bit, concentrate!
     correlation=correlation/((u.trajectory.numframes-T)*8.0) # hard coded number of MA ions
 
-    print correlation
+    #print correlation
 
     fig=plt.figure()
     ax=fig.add_subplot(111)
@@ -212,17 +202,20 @@ def correlation():
     ax.set_xlabel(r'$\Delta t$, frames')
     ax.set_ylabel(r'$r_{T}.r_{T+\Delta t}$')
 
-    plt.show()
+    if (DisplayFigures):
+        plt.show()
     fig.savefig("%s-correlation_averages.pdf"%fileprefix)
     fig.savefig("%s-correlation_averages.png"%fileprefix)
 
     print("OK; calculating autocorrelation, time to cross zero.")
     print ("   alternative analysis, time till cns[i].cns[i+dt] < 0.0 (i.e. falls off to 90 degrees)")
+    sys.stdout.flush()
 
     timetozero=[] #list of times to fall to zero
 
     for carbon,nitrogenlist in enumerate(r):
         print("Ion: %d Calculating dot-product correlation."%(carbon))
+        sys.stdout.flush()
         for i in xrange(u.trajectory.numframes):
             for dt in xrange (u.trajectory.numframes-i):
 #                print i,dt,numpy.dot(cns[i],cns[i+dt])
@@ -234,8 +227,10 @@ def correlation():
     print "Sum time to zero, ", sum(timetozero)
     print "Length time to zero, ", len(timetozero)
     print "Average number of frames: \n", (sum(timetozero)/len(timetozero))
+    sys.stdout.flush()
 
     fig=plt.figure()
+
     ax=fig.add_subplot(111)
 
     plt.hist(timetozero,100,histtype='stepfilled') # we have quite a lot of data here; so 100 bins
@@ -244,29 +239,67 @@ def correlation():
     ax.set_xlabel(r'$\Delta t$, frames')
     ax.set_ylabel(r'$r_{T}.r_{T+\Delta t}<0.0 ?$')
 
-    plt.show()
+    if (DisplayFigures):
+        plt.show()
     fig.savefig("%s-correlation_timetocrosszero.pdf"%fileprefix)
     fig.savefig("%s-correlation_timetocrosszero.png"%fileprefix)
 
 ### OTHER FILE ###
 
 def orientation_density():
+    
+    thetas=[] # List to collect data for later histogramming
+    phis=[]
+
+    thetasOh=[]
+    phisOh=[]
+
+    for frame in cnsn[:,:]:
+        for cn in frame:
+
+            theta,phi = spherical_coordinates(numpy.array(cn)) # Values used for ORIENTATION 
+            thetas.append(theta) #append this data point to lists
+            phis.append(phi)
+ 
+    # Now apply symmetry operations for looking at absolute orientation...
+    # Exploits full Oh symmetry with two lines - see workings in Jarv's notebooks
+    # (rear page of Orange book, 16-4-14)
+            cn=abs(cn)
+            cn=sorted(abs(cn),reverse=True) #Exploit Oh symmetry - see workings in Jarv's notebooks
+            
+            thetaOh,phiOh=spherical_coordinates(numpy.array(cn))
+            thetasOh.append(thetaOh)
+            phisOh.append(phiOh)
+
     # 2D density plot of the theta/phi information
     fig=plt.figure()
     ax=fig.add_subplot(111)
 
-    plt.hexbin(phis,thetas,gridsize=36,marginals=False,cmap=plt.cm.jet)
+    plt.hexbin(phis,thetas,gridsize=36,marginals=False,cmap=plt.cm.cubehelix_r) #PuRd) #cmap=plt.cm.jet)
     plt.colorbar()
     pi=numpy.pi
 
 # Full spherical coordinate axes
-#plt.xticks( [-pi,-pi/2,0,pi/2,pi],
-#            [r'$-\pi$',r'$-\pi/2$',r'$0$',r'$\pi/2$',r'$\pi$'],
-#            fontsize=14)
-#plt.yticks( [0,pi/2,pi],
-#            [r'$0$',r'$\pi/2$',r'$\pi$'],
-#            fontsize=14)
+    plt.xticks( [-pi,-pi/2,0,pi/2,pi],
+                [r'$-\pi$',r'$-\pi/2$',r'$0$',r'$\pi/2$',r'$\pi$'],
+                fontsize=14)
+    plt.yticks( [0,pi/2,pi],
+                [r'$0$',r'$\pi/2$',r'$\pi$'],
+                fontsize=14)
 
+    if (DisplayFigures):
+        plt.show()
+    fig.savefig("%s-orientation_density_nosymm.png"%fileprefix,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-orientation_density_nosymm.pdf"%fileprefix,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-orientation_density_nosymm.eps"%fileprefix,bbox_inches='tight', pad_inches=0.2)
+    
+    fig=plt.figure()
+    ax=fig.add_subplot(111)
+
+    plt.hexbin(phisOh,thetasOh,gridsize=36,marginals=False,cmap=plt.cm.cubehelix_r) #PuRd) #cmap=plt.cm.jet)
+    plt.colorbar()
+    pi=numpy.pi
+   
     # Full symm axes
     plt.xticks( [0.01,pi/4], 
                 [r'$0$',r'$\pi/4$'],
@@ -275,16 +308,19 @@ def orientation_density():
     plt.yticks( [0.9553166181245,pi/2],
                 [r'$0.96$',r'$\pi/2$'],
                 fontsize=14)
-
-    plt.show()
-
-    fig.savefig("%s-orientation_density.png"%fileprefix,bbox_inches='tight', pad_inches=0)
-    fig.savefig("%s-orientation_density.pdf"%fileprefix,bbox_inches='tight', pad_inches=0)
-    fig.savefig("%s-orientation_density.eps"%fileprefix,bbox_inches='tight', pad_inches=0.2)
+    
+    if (DisplayFigures):
+        plt.show()
+    fig.savefig("%s-orientation_density_Oh_symm.png"%fileprefix,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-orientation_density_Oh_symm.pdf"%fileprefix,bbox_inches='tight', pad_inches=0)
+    fig.savefig("%s-orientation_density_Oh_symm.eps"%fileprefix,bbox_inches='tight', pad_inches=0.2)
+ 
 
 
 print("Calculating orientation density...")
+sys.stdout.flush()
 orientation_density()
 print("Calculating correlation...")
+sys.stdout.flush()
 correlation()
 
