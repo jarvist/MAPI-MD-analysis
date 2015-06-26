@@ -11,10 +11,21 @@ import numpy
 import math
 import random
 
-from IPython import embed #iPython magic for interactive session...
+#from IPython import embed #iPython magic for interactive session...
+import datetime # current date for log files etc.
+now=datetime.datetime.now().strftime("%Y-%m-%d-%Hh%Mm") #String of standardised year-leading time
+
+import sys
+
+if (len(sys.argv)>1):
+    trajfilename=sys.argv[1]
+else:
+    trajfilename="300K.xyz"
+
+print 'Argument List:', str(sys.argv), " Trajectory filename: ", trajfilename
 
 #universe item; contains all the mdanalysis stuff
-u= MDAnalysis.Universe("1stframe.pdb","process_xdatcars/aggregate_222.xyz") #Trajectory.xyz")#MAPI_222_equilibr_traj.xyz")
+u= MDAnalysis.Universe("300K.pdb",trajfilename) #Trajectory.xyz")#MAPI_222_equilibr_traj.xyz")
 
 # Above .XYZ file was generated with Keith Butler's Xdat2Xyz.py (depends on ASE)
 # The pdb file was generated with Open Babel
@@ -23,7 +34,7 @@ u= MDAnalysis.Universe("1stframe.pdb","process_xdatcars/aggregate_222.xyz") #Tra
 
 GenThetas=False    # Theta / Phis to STDOUT for plotting externally
 GenXYZ=False        # .XYZ file to STDOUT of CN axes, for Pymol plotting
-ExploitSymm=True  # Exploit full symmetry = 48 fold
+ExploitSymm=False  # Exploit full symmetry = 48 fold
 Exploit8fold=False # Exploit 8-fold symmetry
 
 thetas=[] # List to collect data for later histogramming
@@ -32,10 +43,16 @@ phis=[]
 dotcount=[0.,0.,0.]
 
 carbons=u.selectAtoms('name C')
-nitrogens=u.selectAtoms('name N')
+nitrogens=u.selectAtoms('name H') # Formadinium - look along C-H axis
+
+# FAPI 2x2x2 supercell
+#  1.0000000000000000
+#    12.8149204254000004    0.0000000000000000    0.0000000000000000
+#    0.0000016686000000   12.5312404631999996    0.0000000000000000
+#    0.0000000000000000    0.0000000000000000   12.6751403808000003
 
 #Hard wired cubic PBCs - the MDAnalysis readers don't seem to pick these up from PDB / XYZ files (?)
-mybox=numpy.array([12.5801704656605438,12.5477821243936827,12.5940169967174249],dtype=numpy.float32)
+mybox=numpy.array([12.8149204254000004,12.5312404631999996,12.6751403808000003],dtype=numpy.float32)
 imybox=1/mybox
 
 if GenThetas:
@@ -91,7 +108,7 @@ def spherical_coordinates(cn):
     phi   = math.atan2(y,x)
     return (theta,phi)
 
-# Checking values returned by three symmetric alignments
+print ("Checking symmetry reduced values returned by three symmetric alignments")
 print "[1,0,0] ", spherical_coordinates(numpy.array([1,0,0]))
 print "[1,1,0] ", spherical_coordinates(numpy.array([1,1,0]))
 print "[1,1,1] ", spherical_coordinates(numpy.array([1,1,1]))
@@ -99,8 +116,9 @@ print "[1,1,1] ", spherical_coordinates(numpy.array([1,1,1]))
 
 #test_partition_alignment()
 #end
-cns=[]
+cnsn=numpy.zeros(shape=(u.trajectory.numframes,8,3))
 
+print("Loading Trajectory...")
 for ts in u.trajectory:
     # Of course - this list doesn't actually change between frames; it's part of the topology
     r=MDAnalysis.analysis.distances.distance_array(carbons.coordinates(),nitrogens.coordinates(),mybox)
@@ -131,16 +149,26 @@ for ts in u.trajectory:
                 
                 #print cn,r
                 cn=cn/numpy.linalg.norm(cn) #normalise
-                if carbon==1:
-                    cns.append(cn)
+
+#                print ts.frame,carbon,cn
+                cnsn[ts.frame-1,carbon]=cn #-1 to array index from 0
+
+
+print cnsn
+
+print("OK, loaded Trajectory and generated alignment vectors. Now calculating correlations as a function of time.")
 
 T=1000 #time steps over which to calculate correlation
 correlation=numpy.zeros(T)
-for i in xrange(len(cns)-T):
-    for t in xrange(T):
+
+for carbon,nitrogenlist in enumerate(r): #iterate over all MA ions
+    print("Ions: %d Calculating correlation."%(carbon))
+    for i in xrange(u.trajectory.numframes-T): #over number of frames - time to collect data
+        for dt in xrange(T): #
 #        print i, t
-        correlation[t]=correlation[t]+numpy.dot(cns[i],cns[t+i])
-correlation=correlation/(len(cns)-T)
+            correlation[dt]=correlation[dt]+numpy.dot(cnsn[i,carbon],cnsn[i+dt,carbon]) 
+            #Here comes the science bit, concentrate!
+correlation=correlation/((u.trajectory.numframes-T)*8.0) # hard coded number of MA ions
 
 print correlation
 
@@ -148,4 +176,47 @@ fig=plt.figure()
 ax=fig.add_subplot(111)
 
 plt.plot(correlation)
+
+ax.set_title("Dot Product correlation of FA-vector")
+ax.set_xlabel(r'$\Delta t$, frames')
+ax.set_ylabel(r'$r_{T}.r_{T+\Delta t}$')
+
 plt.show()
+fig.savefig("%s-mdanalysis_FAPI_correlation_averages.pdf"%now)
+fig.savefig("%s-mdanalysis_FAPI_correlation_averages.png"%now)
+
+print("OK; calculating autocorrelation, time to cross zero.")
+print ("   alternative analysis, time till cns[i].cns[i+dt] < 0.0 (i.e. falls off to 90 degrees)")
+
+timetozero=[] #list of times to fall to zero
+
+for carbon,nitrogenlist in enumerate(r):
+    print("Ion: %d Calculating dot-product correlation."%(carbon))
+    for i in xrange(u.trajectory.numframes):
+        for dt in xrange (u.trajectory.numframes-i):
+#            print i,dt,numpy.dot(cns[i],cns[i+dt])
+            #if (numpy.dot(cns[i],cns[i+dt])<0.0):
+                #print i,dt
+            #    timetozero.append(dt)
+            #    break
+#            print cnsn[i,carbon],cnsn[i+dt,carbon],numpy.dot(cnsn[i,carbon],cnsn[i+dt,carbon])
+            if (numpy.dot(cnsn[i,carbon],cnsn[i+dt,carbon])<0.0):
+                timetozero.append(dt)
+                break
+print "Total frames, ", u.trajectory.numframes
+print "Sum time to zero, ", sum(timetozero)
+print "Length time to zero, ", len(timetozero)
+print "Average number of frames: \n", (sum(timetozero)/len(timetozero))
+
+fig=plt.figure()
+ax=fig.add_subplot(111)
+
+plt.hist(timetozero,100,histtype='stepfilled') # we have quite a lot of data here; so 100 bins
+
+ax.set_title("Dot Product correlation of FA-vector, time to cross zero")
+ax.set_xlabel(r'$\Delta t$, frames')
+ax.set_ylabel(r'$r_{T}.r_{T+\Delta t}<0.0 ?$')
+
+plt.show()
+fig.savefig("%s-mdanalysis_FAPI_correlation_timetocrosszero.pdf"%now)
+fig.savefig("%s-mdanalysis_FAPI_correlation_timetocrosszero.png"%now)

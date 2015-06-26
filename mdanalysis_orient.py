@@ -12,9 +12,17 @@ import math
 import random
 
 from IPython import embed #iPython magic for interactive session...
+import sys
+
+if (len(sys.argv)>1):
+    trajfilename=sys.argv[1]
+else:
+    trajfilename="300K.xyz"
+
+print 'Argument List:', str(sys.argv), " Trajectory filename: ", trajfilename
 
 #universe item; contains all the mdanalysis stuff
-u= MDAnalysis.Universe("1stframe.pdb","process_xdatcars/aggregate_222.xyz") #Trajectory.xyz")#MAPI_222_equilibr_traj.xyz")
+u= MDAnalysis.Universe("300K.pdb",trajfilename) 
 
 # Above .XYZ file was generated with Keith Butler's Xdat2Xyz.py (depends on ASE)
 # The pdb file was generated with Open Babel
@@ -23,7 +31,7 @@ u= MDAnalysis.Universe("1stframe.pdb","process_xdatcars/aggregate_222.xyz") #Tra
 
 GenThetas=False    # Theta / Phis to STDOUT for plotting externally
 GenXYZ=False        # .XYZ file to STDOUT of CN axes, for Pymol plotting
-ExploitSymm=True  # Exploit full symmetry = 48 fold
+ExploitSymm=False # Exploit full symmetry = 48 fold
 Exploit8fold=False # Exploit 8-fold symmetry
 
 thetas=[] # List to collect data for later histogramming
@@ -32,10 +40,16 @@ phis=[]
 dotcount=[0.,0.,0.]
 
 carbons=u.selectAtoms('name C')
-nitrogens=u.selectAtoms('name N')
+nitrogens=u.selectAtoms('name H') # Formadinium - look along C-H axis
+
+# FAPI 2x2x2 supercell
+#  1.0000000000000000
+#    12.8149204254000004    0.0000000000000000    0.0000000000000000
+#    0.0000016686000000   12.5312404631999996    0.0000000000000000
+#    0.0000000000000000    0.0000000000000000   12.6751403808000003
 
 #Hard wired cubic PBCs - the MDAnalysis readers don't seem to pick these up from PDB / XYZ files (?)
-mybox=numpy.array([12.5801704656605438,12.5477821243936827,12.5940169967174249],dtype=numpy.float32)
+mybox=numpy.array([12.8149204254000004,12.5312404631999996,12.6751403808000003],dtype=numpy.float32)
 imybox=1/mybox
 
 if GenThetas:
@@ -58,7 +72,7 @@ def partition_alignment(cn):
         dots.append(numpy.dot(unit,sm))
     dotcount[numpy.argmax(dots)]=dotcount[numpy.argmax(dots)]+1
 #    print dotcount
-    print cn[0],cn[1],cn[2],numpy.argmax(dots) #x,y,z, which type (for colour)
+#    print cn[0],cn[1],cn[2],numpy.argmax(dots) #x,y,z, which type (for colour)
 #    print "FaceTheta: ", math.acos(min(dots[0],1.0)) #fix to domain errors as dots[] creeping above 1.0
 #    print "EdgeTheta: ", math.acos(min(dots[1],1.0))
 #    print "DiagTheta: ", math.acos(min(dots[2],1.0))
@@ -179,9 +193,9 @@ plt.yticks( [0.9553166181245,pi/2],
 
 plt.show()
 
-fig.savefig("mdanalysis_cn_dist.png",bbox_inches='tight', pad_inches=0)
+fig.savefig("mdanalysis_FAPI_orient.png",bbox_inches='tight', pad_inches=0)
 #fig.savefig("mdanalysis_cn_dist.pdf",bbox_inches='tight', pad_inches=0)
-fig.savefig("mdanalysis_cn_dist.eps",bbox_inches='tight', pad_inches=0.2)
+fig.savefig("mdanalysis_FAPI_orient.eps",bbox_inches='tight', pad_inches=0.2)
 
 end
 
