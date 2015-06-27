@@ -21,6 +21,18 @@ set style line 7 lt 1 lc rgb '#FDBF6F' # light orange
 set style line 8 lt 1 lc rgb '#FF7F00' # dark orange
 
 ### Below is by Jarvist
+
+# Gay pride palette; Love wins!
+# Colours from: https://commons.wikimedia.org/wiki/File:Gay_flag.svg
+set palette maxcolors 6
+set palette defined ( 0 '#f00000',\
+                      1 '#ff8000',\
+                      2 '#ffff00',\
+                      3 '#007940',\
+                      4 '#4040ff',\
+                      5 '#a000c0' )
+set palette negative # Flag seems to usually have red on top
+
 filename="2015-06-27-15h00m-300K-mdanalysis-correlation_timetocrosszero.txt"
 filenameavg="2015-06-27-15h00m-300K-mdanalysis-correlation_averages.txt"
 
@@ -53,9 +65,13 @@ set boxwidth binwidth
 
 set style fill solid  # border -1 # black border
 
-plot filename  \
-u (bin($1+epsilon,binwidth)):(-1.0/(frames*binwidth)) smooth freq with boxes t "Probability Density" ls 1, \
-"" u 1:(1.0/frames) smooth cumulative t "Cumulative Probability" ls 4, \
+set table 'tmp.txt'
+plot filename u (bin($1+epsilon,binwidth)):(-1.0/(frames*binwidth)):(bin($1+epsilon,binwidth)) smooth freq 
+unset table
+
+plot \
+'tmp.txt' u 1:($2*6):1 with boxes t "Probability Density" ls 1 lc palette, \
+filename u 1:(1.0/frames) smooth cumulative t "Cumulative Probability" ls 4, \
 filenameavg \
 u 1:2 w l t "Autocorrelation" ls 6, \
 0.5 lt 3 lc black
@@ -65,11 +81,16 @@ set arrow from STATS_median,0 to STATS_median,0.5 #reach up to cumulative probab
 #set arrow from STATS_mean,0 to STATS_mean,-0.5 # reach down to histogram...
 
 replot
+unset key
 
 # Output postscript...
 set terminal postscript eps enhanced color \
     font 'Helvetica,20' linewidth 2
 set output 'timetocrosszero.eps'
-unset key
+replot
+
+# Output png
+set terminal png size 1024,768 
+set output 'timetocrosszero.png'
 replot
 
