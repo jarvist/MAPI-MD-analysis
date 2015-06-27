@@ -33,6 +33,12 @@ set palette defined ( 0 '#f00000',\
                       5 '#a000c0' )
 set palette negative # Flag seems to usually have red on top
 
+#2015-06-27-14h54m-075K-mdanalysis-correlation_timetocrosszero.txt
+#2015-06-27-15h00m-300K-mdanalysis-correlation_timetocrosszero.txt
+#2015-06-27-14h54m-150K-mdanalysis-correlation_timetocrosszero.txt
+#2015-06-27-15h06m-375K-mdanalysis-correlation_timetocrosszero.txt
+#2015-06-27-14h57m-225K-mdanalysis-correlation_timetocrosszero.txt
+#2015-06-27-15h08m-450K-mdanalysis-correlation_timetocrosszero.txt
 filename="2015-06-27-15h00m-300K-mdanalysis-correlation_timetocrosszero.txt"
 filenameavg="2015-06-27-15h00m-300K-mdanalysis-correlation_averages.txt"
 
@@ -50,7 +56,7 @@ set xtics 2
 set mxtics 2
 
 # Similar for y; want to hit prob=0.5 as a guide to the eye.
-set ytics 0.5
+set ytics 0,0.5,1
 set mytics 5
 
 bin(x,width)=width*floor(x/width)
@@ -63,25 +69,29 @@ binwidth=0.025 #units the same as the xaxis datastream
 epsilon=-0.0001 #to make discretised objects flow definitely into a bin + not get caught out by floating point arithmatic errors
 set boxwidth binwidth
 
-set style fill solid  # border -1 # black border
+set style fill solid # border -1 # black border
 
-set table 'tmp.txt'
-plot filename u (bin($1+epsilon,binwidth)):(-1.0/(frames*binwidth)):(bin($1+epsilon,binwidth)) smooth freq 
-unset table
+set key inside bottom right
 
-plot \
-'tmp.txt' u 1:($2*6):1 with boxes t "Probability Density" ls 1 lc palette, \
+#set table 'tmp.txt'
+#plot filename u (bin($1+epsilon,binwidth)):(-1.0/(frames*binwidth)):(bin($1+epsilon,binwidth)) smooth freq 
+#unset table
+#plot \
+#'tmp.txt' u 1:($2*6):1 with boxes t "Probability Density" ls 1 lc palette, \
+
+# Magic '3' factor scales PDF (which otherwise integrates over 1 ps areas) to
+# be ~equal in magnitude to the +'ve correlation / denstiies, which are on
+# a range  [0..1]
+plot filename u (bin($1+epsilon,binwidth)):(-6.0/(frames*binwidth)) smooth freq with boxes t "Probability Density" ls 1, \
 filename u 1:(1.0/frames) smooth cumulative t "Cumulative Probability" ls 4, \
 filenameavg \
 u 1:2 w l t "Autocorrelation" ls 6, \
-0.5 lt 3 lc black
+0.5 lt 0 lc black t ""
 
 set arrow from STATS_median,0 to STATS_median,0.5 #reach up to cumulative probability... 
-
 #set arrow from STATS_mean,0 to STATS_mean,-0.5 # reach down to histogram...
 
 replot
-unset key
 
 # Output postscript...
 set terminal postscript eps enhanced color \
@@ -94,3 +104,5 @@ set terminal png size 1024,768
 set output 'timetocrosszero.png'
 replot
 
+set terminal qt
+replot
