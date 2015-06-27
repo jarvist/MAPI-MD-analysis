@@ -39,8 +39,11 @@ GenThetas=False    # Theta / Phis to STDOUT for plotting externally
 GenXYZ=False        # .XYZ file to STDOUT of CN axes, for Pymol plotting
 #ExploitSymm=False  # Exploit full symmetry = 48 fold
 #Exploit8fold=False # Exploit 8-fold symmetry
-
 DisplayFigures=False # interrupt program with matplotlib, or just silent write to file?
+
+MDTimestep=0.025 # Number of ps per _FRAME_ of data supplied. 
+                 # For me, this is MD with dt=0.5 fs ; saving every 50th frame --> 25 fs --> 0.025 ps
+                 # Just used to scale outputs / histograms
 
 dotcount=[0.,0.,0.]
 
@@ -179,7 +182,7 @@ sys.stdout.flush()
 
 def correlation():
     print("Now calculating correlations as a function of time.")
-    T=1000 #time steps over which to calculate correlation
+    T=1000 #dataframes over which to calculate correlation
     correlation=numpy.zeros(T)
 
     for carbon,nitrogenlist in enumerate(r): #iterate over all MA ions
@@ -207,6 +210,12 @@ def correlation():
         plt.show()
     fig.savefig("%s-correlation_averages.pdf"%fileprefix)
     fig.savefig("%s-correlation_averages.png"%fileprefix)
+    
+    # Save data for future plotting; in units rescaled to ps
+    f = open("%s-correlation_averages.txt"%fileprefix, "w")
+    for frame,count in enumerate(correlation):
+        f.write( str(frame*MDTimestep) + ' ' + str(count) + '\n'  )
+    f.close()
 
     print("OK; calculating autocorrelation, time to cross zero.")
     print ("   alternative analysis, time till cns[i].cns[i+dt] < 0.0 (i.e. falls off to 90 degrees)")
@@ -244,6 +253,12 @@ def correlation():
         plt.show()
     fig.savefig("%s-correlation_timetocrosszero.pdf"%fileprefix)
     fig.savefig("%s-correlation_timetocrosszero.png"%fileprefix)
+
+    # Save data for future plotting; in units rescaled to ps
+    f = open("%s-correlation_timetocrosszero.txt"%fileprefix, "w")
+    for t in timetozero:
+        f.write(str(t*MDTimestep) + '\n')
+    f.close()
 
 ### OTHER FILE ###
 
@@ -348,5 +363,5 @@ sys.stdout.flush()
 orientation_density()
 print("Calculating correlation...")
 sys.stdout.flush()
-#correlation()
+correlation()
 
