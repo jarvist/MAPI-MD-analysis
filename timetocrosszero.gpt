@@ -1,0 +1,75 @@
+# xyborder.cfg
+set style line 101 lc rgb '#808080' lt 1 lw 1
+set border 3 front ls 101
+set tics nomirror out scale 1.25
+set format '%g' # we are engineers
+
+# line styles for ColorBrewer Paired
+# for use with qualitative/categorical data
+# provides 8 colors in 4 pairs
+# compatible with gnuplot >=4.2
+# author: Anna Schneider
+
+# line styles
+set style line 1 lt 1 lc rgb '#A6CEE3' # light blue
+set style line 2 lt 1 lc rgb '#1F78B4' # dark blue
+set style line 3 lt 1 lc rgb '#B2DF8A' # light green
+set style line 4 lt 1 lc rgb '#33A02C' # dark green
+set style line 5 lt 1 lc rgb '#FB9A99' # light red
+set style line 6 lt 1 lc rgb '#E31A1C' # dark red
+set style line 7 lt 1 lc rgb '#FDBF6F' # light orange
+set style line 8 lt 1 lc rgb '#FF7F00' # dark orange
+
+### Below is by Jarvist
+filename="2015-06-27-15h00m-300K-mdanalysis-correlation_timetocrosszero.txt"
+filenameavg="2015-06-27-15h00m-300K-mdanalysis-correlation_averages.txt"
+
+stats filename # defaults to defining a load of STATS_ variables, which is fine by me.
+
+set xlabel "Time (ps)"
+set ylabel "Probability"
+
+set xrange [0:10] # all over by 10 ps
+set yrange [:1]
+
+# Probably quite specific to here: 10 ps looks nice with {0,2,4..} + a single
+# minor tic
+set xtics 2
+set mxtics 2
+
+# Similar for y; want to hit prob=0.5 as a guide to the eye.
+set ytics 0.5
+set mytics 5
+
+bin(x,width)=width*floor(x/width)
+
+frames=STATS_records # It's like magic! 
+
+binwidth=0.025 #units the same as the xaxis datastream
+# Nb: when analysing MD data, this is discretised by the dt=time stamp.
+#  Build a Moire pattern at your peril!
+epsilon=-0.0001 #to make discretised objects flow definitely into a bin + not get caught out by floating point arithmatic errors
+set boxwidth binwidth
+
+set style fill solid  # border -1 # black border
+
+plot filename  \
+u (bin($1+epsilon,binwidth)):(-1.0/(frames*binwidth)) smooth freq with boxes t "Probability Density" ls 1, \
+"" u 1:(1.0/frames) smooth cumulative t "Cumulative Probability" ls 4, \
+filenameavg \
+u 1:2 w l t "Autocorrelation" ls 6, \
+0.5 lt 3 lc black
+
+set arrow from STATS_median,0 to STATS_median,0.5 #reach up to cumulative probability... 
+
+#set arrow from STATS_mean,0 to STATS_mean,-0.5 # reach down to histogram...
+
+replot
+
+# Output postscript...
+set terminal postscript eps enhanced color \
+    font 'Helvetica,20' linewidth 2
+set output 'timetocrosszero.eps'
+unset key
+replot
+
