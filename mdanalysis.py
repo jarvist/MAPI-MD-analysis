@@ -291,6 +291,8 @@ def orientation_density():
     fig=plt.figure()
     ax=fig.add_subplot(111)
 
+# Use Cubehelix colourmap, as it is wicked. 
+# Read why: http://www.ifweassume.com/2013/05/cubehelix-or-how-i-learned-to-love.html
     plt.hexbin(phis,thetas,gridsize=36,marginals=False,cmap=plt.cm.cubehelix_r) #PuRd) #cmap=plt.cm.jet)
     plt.colorbar()
     pi=numpy.pi

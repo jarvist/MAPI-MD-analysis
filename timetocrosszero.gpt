@@ -33,14 +33,10 @@ set palette defined ( 0 '#f00000',\
                       5 '#a000c0' )
 set palette negative # Flag seems to usually have red on top
 
-#2015-06-27-14h54m-075K-mdanalysis-correlation_timetocrosszero.txt
-#2015-06-27-15h00m-300K-mdanalysis-correlation_timetocrosszero.txt
-#2015-06-27-14h54m-150K-mdanalysis-correlation_timetocrosszero.txt
-#2015-06-27-15h06m-375K-mdanalysis-correlation_timetocrosszero.txt
-#2015-06-27-14h57m-225K-mdanalysis-correlation_timetocrosszero.txt
-#2015-06-27-15h08m-450K-mdanalysis-correlation_timetocrosszero.txt
-filename="2015-06-27-15h00m-300K-mdanalysis-correlation_timetocrosszero.txt"
-filenameavg="2015-06-27-15h00m-300K-mdanalysis-correlation_averages.txt"
+#2015-06-27-22h52m-300K-mdanalysis-correlation_averages.txt         2015-06-27-22h52m-300K-mdanalysis-correlation_timetocrosszero.txt
+
+filename="2015-06-27-22h52m-300K-mdanalysis-correlation_timetocrosszero.txt"
+filenameavg="2015-06-27-22h52m-300K-mdanalysis-correlation_averages.txt"
 
 stats filename # defaults to defining a load of STATS_ variables, which is fine by me.
 
@@ -79,30 +75,36 @@ set key inside bottom right
 #plot \
 #'tmp.txt' u 1:($2*6):1 with boxes t "Probability Density" ls 1 lc palette, \
 
-# Magic '3' factor scales PDF (which otherwise integrates over 1 ps areas) to
-# be ~equal in magnitude to the +'ve correlation / denstiies, which are on
+# Magic '6' factor scales PDF (which otherwise integrates over 1 ps areas) to
+# be 2X ~equal in magnitude to the +'ve correlation / denstiies, which are on
 # a range  [0..1]
 plot filename u (bin($1+epsilon,binwidth)):(-6.0/(frames*binwidth)) smooth freq with boxes t "Probability Density" ls 1, \
 filename u 1:(1.0/frames) smooth cumulative t "Cumulative Probability" ls 4, \
 filenameavg \
 u 1:2 w l t "Autocorrelation" ls 6, \
-0.5 lt 0 lc black t ""
+0.5 lt 0 lc black t "", \
+0.0 lt 1 lc black t ""
 
 set arrow from STATS_median,0 to STATS_median,0.5 #reach up to cumulative probability... 
 #set arrow from STATS_mean,0 to STATS_mean,-0.5 # reach down to histogram...
 
 replot
 
-# Output postscript...
+# TERMINALS
+#  See info: http://www.gnuplotting.org/output-terminals/
+
+# Output postscript - defaults for single column figure
 set terminal postscript eps enhanced color \
     font 'Helvetica,20' linewidth 2
 set output 'timetocrosszero.eps'
 replot
 
-# Output png
-set terminal png size 1024,768 
+# Output png - defaults for talk slide
+set terminal png size 1024,768 enhanced \
+    font 'Helvetica,20' linewidth 2
 set output 'timetocrosszero.png'
 replot
 
-set terminal qt
+# Display interactive for the user
+set terminal qt persist
 replot
